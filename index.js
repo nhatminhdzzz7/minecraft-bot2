@@ -1,47 +1,48 @@
+const mc = require('minecraft-protocol');
 const http = require('http');
-http.createServer((req, res) => {
-  res.write('Bot đang chạy!');
-  res.end();
-}).listen(8080);
-const mineflayer = require('mineflayer');
 
-const config = {
-  host: 'aechat.aternos.me',
-  port: 37480,
-  username: '24/7',
-  version: '1.21.11',
-};
+http.createServer((req, res) => {
+  res.end('Bot running');
+}).listen(process.env.PORT || 8080);
+
+let delay = 5000;
 
 function createBot() {
-  const bot = mineflayer.createBot(config);
-
-  bot.on('login', () => {
-    console.log('✅ Bot đã vào server!');
+  const client = mc.createClient({
+    host: 'aechat.aternos.me',
+    port: 37480,
+    username: 'Technoblade',
+    version: false,
+    auth: 'offline'
   });
 
-  bot.on('spawn', () => {
-    console.log('📍 Bot đã spawn!');
-    setInterval(() => {
-      bot.setControlState('jump', true);
-      setTimeout(() => bot.setControlState('jump', false), 500);
-    }, 30000);
-    setInterval(() => {
-      bot.look(bot.entity.yaw + 0.5, 0, false);
-    }, 10000);
+  client.on('login', () => {
+    console.log('✅ Đã vào server');
+
+    // đăng ký + login nhanh (QUAN TRỌNG)
+    setTimeout(() => {
+      client.write('chat', { message: '/register 123456 123456' });
+    }, 500);
+
+    setTimeout(() => {
+      client.write('chat', { message: '/login 123456' });
+    }, 1500);
   });
 
-  bot.on('kicked', (reason) => {
-    console.log(`⚠️ Bị kick: ${reason}`);
-    setTimeout(createBot, 5000);
+  client.on('kicked', (reason) => {
+    console.log('🚫 Bị kick:', reason);
+    reconnect();
   });
 
-  bot.on('error', (err) => {
-    console.log(`❌ Lỗi: ${err.message}`);
-    setTimeout(createBot, 5000);
+  client.on('error', (err) => {
+    console.log('❌ Lỗi:', err.message);
+    reconnect();
   });
 
-  bot.on('end', () => {
-    console.log('🔌 Mất kết nối, reconnect...');
-    setTimeout(createBot, 5000);
+  client.on('end', () => {
+    console.log('🔌 Mất kết nối');
+    reconnect();
   });
 }
+
+function reconnect() {
